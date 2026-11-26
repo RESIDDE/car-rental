@@ -14,13 +14,13 @@ const scene = new THREE.Scene();
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
 
 const camera = new THREE.PerspectiveCamera(32, 2, 0.1, 100);
-camera.position.set(4.6, 1.5, -4.2);
+camera.position.set(5.2, 1.6, -4.8);
 
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 0.45, 0);
 controls.enableDamping = true;
 controls.enablePan = false;
-controls.minDistance = 4.5; controls.maxDistance = 9;
+controls.enableZoom = false;
 controls.minPolarAngle = 0.9; controls.maxPolarAngle = Math.PI / 2.05;
 controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 controls.autoRotateSpeed = 1.2;

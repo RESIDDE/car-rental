@@ -289,19 +289,13 @@ F('rFrom').addEventListener('change',()=>{rp='custom';renderReport()});
 F('rTo').addEventListener('change',()=>{rp='custom';renderReport()});
 F('rPrint').onclick=()=>window.print();
 
-/* ---- 3D stage ---- */
-let si=0;
-const STL={free:'Available',out:'Out with customer',overdue:'Overdue!',due:'Pick-up due'};
+/* ---- live map feed ---- */
 function renderStage(){
-  const n=S.cars.length;if(!n){F('sName').textContent='No cars yet';F('sPlate').textContent='Add one under Fleet';F('sState').textContent='—';F('sRev').textContent='—';F('sDays').textContent='—';return}
-  si=(si+n)%n;const c=S.cars[si],st=carState(c),bs=S.bookings.filter(b=>b.carId===c.id&&live(b));
-  F('sName').textContent=c.name;F('sPlate').textContent=(c.plate||'No plate')+` · ${si+1}/${n}`;
-  F('sState').textContent=STL[st.k]+(st.b&&st.k!=='free'?' · '+drvName(st.b.driverId):'');F('sState').dataset.k=st.k;
-  F('sRev').textContent=naira(sum(bs,total));F('sDays').textContent=sum(bs.filter(b=>b.status!=='booked'),days)+' days';
-  window.dispatchEvent(new CustomEvent('stagecar',{detail:{i:si,id:c.id}}));
+  window.__fleet=S.cars.map(c=>{const st=carState(c),bs=S.bookings.filter(b=>b.carId===c.id&&live(b));return{id:c.id,name:c.name,plate:c.plate||'NO PLATE',k:st.k,label:LBL[st.k],customer:st.b&&st.b.customer||'',driver:st.b?drvName(st.b.driverId):'',end:st.b?fmtD(st.b.end):'',rev:naira(sum(bs,total))}});
+  window.dispatchEvent(new Event('fleet'));
 }
-F('sPrev').onclick=()=>{si--;renderStage()};F('sNext').onclick=()=>{si++;renderStage()};
-const tick=()=>{const d=new Date();F('clock').textContent=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});F('today').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})};tick();setInterval(tick,15000);
+const tick=()=>{const d=new Date();F('clock').textContent=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});F('today').textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})};tick();setInterval(tick,15000);
+F('gq').addEventListener('keydown',e=>{if(e.key==='Enter'){F('q').value=F('gq').value;filter='all';location.hash='bookings';renderBookings()}});
 
 /* ---- start ---- */
 render();
