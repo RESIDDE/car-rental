@@ -36,25 +36,12 @@
   <div class="ops-head">
     <div><h1>Operations Dashboard</h1><p class="sub"><span id="today"></span> · <span id="headline">Loading your fleet…</span> · <span id="subline"></span></p></div>
   </div>
-  <div class="ops-tools">
-    <span id="mapChips"></span>
-    <span class="tg"><label><input type="checkbox" id="tRoutes" checked><i></i>Show routes</label><label><input type="checkbox" id="tNames" checked><i></i>Show names</label></span>
-  </div>
-  <div class="mapbox">
-    <canvas id="fleetMap" aria-label="Live fleet map simulation — tap a car"></canvas>
-    <div class="compass"><div class="dial" id="dial"><b>N</b><span>E</span><span>S</span><span>W</span></div><div class="hd" id="hdg">N</div></div>
-    <div class="vcard">
-      <div class="vtop"><div><div class="plate-big" id="vPlate">—</div><small id="vName"></small></div><span class="pill" id="vState">—</span></div>
-      <div class="car3dbox"><canvas id="car3d" aria-label="3D car — drag to spin"></canvas><p class="loading" id="carLoading">Loading 3D car…</p></div>
-      <div class="route"><div class="rt"><span id="vFrom">—</span><span>→</span><span id="vTo">—</span></div><div class="prog"><i id="vProg"></i></div>
-        <div class="rmeta"><span>ETA <b id="vEta">—</b></span><span id="vWho"></span></div></div>
-      <div class="gauges">
-        <div class="g"><small>Speed</small><svg viewBox="0 0 100 70"><path d="M10 62 A42 42 0 1 1 90 62" class="trk"/><path d="M10 62 A42 42 0 1 1 90 62" class="val" id="gSpd" pathLength="100"/><line x1="50" y1="50" x2="50" y2="18" id="gNeedle"/></svg><b><span id="vSpd">0</span> km/h</b></div>
-        <div class="g"><small>Fuel</small><svg viewBox="0 0 100 70"><circle cx="50" cy="38" r="28" class="trk"/><circle cx="50" cy="38" r="28" class="val f" id="gFuel" pathLength="100"/><text x="50" y="43" id="vFuel">—</text></svg><b id="vRev">—</b></div>
-      </div>
-      <div class="alert" id="vAlert" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20zM12 10v5M12 18h.01"/></svg><span></span></div>
-      <div class="vnav"><button class="sm" id="vPrev">◀</button><span id="vIdx"></span><button class="sm" id="vNext">▶</button></div>
-    </div>
+  <div class="kgrid" id="kgrid"></div>
+  <div class="ogrid">
+    <div class="panel"><div class="ph"><h2>On the road now</h2><a href="#bookings">All trips →</a></div><div class="trips" id="liveTrips"></div></div>
+    <div class="panel"><div class="ph"><h2>Needs attention</h2></div><ul class="alist" id="alerts"></ul></div>
+    <div class="panel"><div class="ph"><h2>Fleet status</h2><a href="#fleet">Fleet →</a></div><div id="fleetMix"></div></div>
+    <div class="panel"><div class="ph"><h2>Drivers</h2><a href="#drivers">Drivers →</a></div><ul class="alist" id="drvList"></ul></div>
   </div>
   <h2 style="margin-top:28px">Fleet board · next two weeks</h2>
   <div class="board" id="board"></div>
@@ -179,6 +166,4 @@
 
 <div class="toast" id="toast" hidden role="status"><span id="tMsg"></span><button id="tUndo" hidden>Undo</button></div>
 <script type="module" src="/src/main.js"></script>
-<script type="module" src="/src/car3d.js"></script>
-<script type="module" src="/src/fleetmap.js"></script>
 </body></html>

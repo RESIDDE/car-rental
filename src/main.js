@@ -289,10 +289,30 @@ F('rFrom').addEventListener('change',()=>{rp='custom';renderReport()});
 F('rTo').addEventListener('change',()=>{rp='custom';renderReport()});
 F('rPrint').onclick=()=>window.print();
 
-/* ---- live map feed ---- */
+/* ---- overview cards ---- */
 function renderStage(){
-  window.__fleet=S.cars.map(c=>{const st=carState(c),bs=S.bookings.filter(b=>b.carId===c.id&&live(b));return{id:c.id,name:c.name,plate:c.plate||'NO PLATE',k:st.k,label:LBL[st.k],customer:st.b&&st.b.customer||'',driver:st.b?drvName(st.b.driverId):'',end:st.b?fmtD(st.b.end):'',rev:naira(sum(bs,total))}});
-  window.dispatchEvent(new Event('fleet'));
+  const n=S.cars.length,st=S.cars.map(c=>({c,s:carState(c)}));
+  const cnt=k=>st.filter(x=>x.s.k===k).length;
+  const {rev,cost}=monthStats(month),owed=S.bookings.filter(live).reduce((a,b)=>a+Math.max(0,bal(b)),0);
+  const todayRev=sum(S.bookings.filter(b=>live(b)&&b.start===TODAY),total);
+  const K=[['Cars on the road',cnt('out')+cnt('overdue'),`of ${n} in fleet`,'lime'],['Available now',cnt('free'),'ready to rent',''],['Overdue',cnt('overdue'),'past return date',cnt('overdue')?'red':''],['Pick-ups due',cnt('due'),'today or earlier',''],
+    ['Booked this month',short(rev),'rentals started','lime'],['Profit this month',short(rev-cost),short(cost)+' in costs',''],['Still owed',short(owed),'by customers',owed?'red':''],['Booked today',short(todayRev),fmtD(TODAY),'']];
+  F('kgrid').innerHTML=K.map(([l,v,s,t])=>`<div class="kcard ${t}"><small>${l}</small><b>${v}</b><span>${s}</span></div>`).join('');
+  const out=S.bookings.filter(b=>b.status==='out').sort((a,b)=>a.end<b.end?-1:1);
+  F('liveTrips').innerHTML=out.length?out.map(b=>{const k=stateOf(b),c=carOf(b.carId)||{},tot=Math.max(1,days(b)),gone=Math.min(tot,Math.max(0,diff(b.start,TODAY))),left=diff(TODAY,b.end);
+    return `<button class="trip" data-edit="${esc(b.id)}"><div class="tt"><b>${esc(c.plate||'NO PLATE')}</b><span class="pill p-${k}">${k==='overdue'?'Overdue':'On trip'}</span></div><div class="tn">${esc(carName(b.carId))}</div>
+    <div class="prog"><i style="width:${gone/tot*100}%"></i></div><div class="tm"><span>${fmtD(b.start)} → ${fmtD(b.end)}</span><span class="${left<0?'owe':''}">${left<0?-left+'d late':left===0?'Back today':left+'d left'}</span></div>
+    <div class="tm"><span>${esc(b.customer)} · ${esc(drvName(b.driverId))}</span><span class="${bal(b)>0?'owe':''}">${bal(b)>0?naira(bal(b))+' due':'Paid'}</span></div></button>`}).join(''):'<p class="note">No cars out right now.</p>';
+  const al=[];
+  for(const b of S.bookings){if(!live(b))continue;
+    if(b.status==='out'&&b.end<TODAY)al.push(['red',`${esc(carName(b.carId))} overdue`,`${esc(b.customer)} · due ${fmtD(b.end)}`,b.id]);
+    else if(b.status==='booked'&&b.start<=TODAY&&b.end>=TODAY)al.push(['amber',`Pick-up due · ${esc(carName(b.carId))}`,esc(b.customer),b.id]);
+    else if(b.status==='out'&&b.end===TODAY)al.push(['lime',`Returning today · ${esc(carName(b.carId))}`,esc(b.customer),b.id]);
+    if(b.status==='returned'&&bal(b)>0)al.push(['red',`${naira(bal(b))} unpaid`,`${esc(b.customer)} · ${esc(carName(b.carId))}`,b.id]);}
+  F('alerts').innerHTML=al.length?al.slice(0,8).map(([t,a,s,id])=>`<li><i class="dot ${t}"></i><span class="w"><b>${a}</b><small>${s}</small></span><button class="sm" data-edit="${esc(id)}">Open</button></li>`).join(''):'<li class="note">All clear — nothing needs attention.</li>';
+  const mix=[['out','On trip'],['overdue','Overdue'],['due','Pick-up due'],['free','Available']];
+  F('fleetMix').innerHTML=n?`<div class="mixbar">${mix.map(([k])=>cnt(k)?`<i class="m-${k}" style="flex:${cnt(k)}"></i>`:'').join('')}</div><ul class="mixk">${mix.map(([k,l])=>`<li><i class="m-${k}"></i>${l}<b>${cnt(k)}</b></li>`).join('')}</ul>`:'<p class="note">Add cars under Fleet.</p>';
+  F('drvList').innerHTML=S.drivers.length?S.drivers.map(d=>{const on=S.bookings.find(b=>b.driverId===d.id&&b.status==='out');return `<li><span class="av sm">${esc(d.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase())}</span><span class="w"><b>${esc(d.name)}</b><small>${on?'Driving '+esc(carName(on.carId))+' · back '+fmtD(on.end):'Available'}</small></span><i class="dot ${on?'lime':''}"></i></li>`}).join(''):'<li class="note">No drivers yet.</li>';
 }
 const tick=()=>{const d=new Date();F('clock').textContent=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});F('today').textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})};tick();setInterval(tick,15000);
 F('gq').addEventListener('keydown',e=>{if(e.key==='Enter'){F('q').value=F('gq').value;filter='all';location.hash='bookings';renderBookings()}});
