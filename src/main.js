@@ -290,14 +290,47 @@ F('rTo').addEventListener('change',()=>{rp='custom';renderReport()});
 F('rPrint').onclick=()=>window.print();
 
 /* ---- overview cards ---- */
+const wave=(n,amp,ph,col,w=2)=>{let d='';for(let i=0;i<=60;i++){const x=i/60*300,y=40+Math.sin(i/60*Math.PI*n+ph)*amp*Math.sin(i/60*Math.PI);d+=(i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`};
 function renderStage(){
-  const n=S.cars.length,st=S.cars.map(c=>({c,s:carState(c)}));
-  const cnt=k=>st.filter(x=>x.s.k===k).length;
-  const {rev,cost}=monthStats(month),owed=S.bookings.filter(live).reduce((a,b)=>a+Math.max(0,bal(b)),0);
-  const todayRev=sum(S.bookings.filter(b=>live(b)&&b.start===TODAY),total);
-  const K=[['Cars on the road',cnt('out')+cnt('overdue'),`of ${n} in fleet`,'lime'],['Available now',cnt('free'),'ready to rent',''],['Overdue',cnt('overdue'),'past return date',cnt('overdue')?'red':''],['Pick-ups due',cnt('due'),'today or earlier',''],
-    ['Booked this month',short(rev),'rentals started','lime'],['Profit this month',short(rev-cost),short(cost)+' in costs',''],['Still owed',short(owed),'by customers',owed?'red':''],['Booked today',short(todayRev),fmtD(TODAY),'']];
-  F('kgrid').innerHTML=K.map(([l,v,s,t])=>`<div class="kcard ${t}"><small>${l}</small><b>${v}</b><span>${s}</span></div>`).join('');
+  const n=S.cars.length,st=S.cars.map(c=>carState(c).k),L7=Array.from({length:7},(_,i)=>addD(TODAY,i-6));
+  F('today').textContent=`${fmtD(L7[0])} – ${fmtD(TODAY)}, ${TODAY.slice(0,4)}`;
+  const onDay=(b,d)=>live(b)&&b.status!=='booked'&&b.start<=d&&d<b.end;
+  // activity: top 3 cars, blocks on days rented
+  const top=[...S.cars].map(c=>({c,k:S.bookings.filter(b=>b.carId===c.id&&L7.some(d=>onDay(b,d))).length})).sort((a,b)=>b.k-a.k).slice(0,3);
+  const rd=sum(S.bookings,b=>L7.filter(d=>onDay(b,d)).length);
+  F('cAct').innerHTML=`<div class="actg">${top.map(({c})=>`<span class="al">${esc(c.name.split(' ').slice(0,2).join(' '))}</span><span class="ar">${L7.map(d=>`<i class="${S.bookings.some(b=>b.carId===c.id&&onDay(b,d))?'on':''}"></i>`).join('')}</span>`).join('')||'<span class="note">No cars yet</span>'}</div>
+    <div class="gf"><div><b class="big">${rd}</b><small>Rental days</small></div><div class="ax">${L7.map(d=>`<span>${+d.slice(8)}</span>`).join('')}</div></div>`;
+  // revenue: cumulative this week vs last week
+  const P7=L7.map(d=>addD(d,-7)),dayRev=d=>sum(S.bookings.filter(b=>live(b)&&b.start===d),total);
+  let c1=0,c2=0;const A=L7.map(d=>c1+=dayRev(d)),B=P7.map(d=>c2+=dayRev(d)),mx=Math.max(1,c1,c2);
+  const line=(arr,col)=>`<path d="${arr.map((v,i)=>(i?'L':'M')+(i/6*180).toFixed(1)+' '+(70-v/mx*62).toFixed(1)).join('')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  const dv=c1-c2;
+  F('cRev').innerHTML=`<svg viewBox="-2 0 184 74" class="rchart">${[8,39,70].map(y=>`<line x1="0" x2="180" y1="${y}" y2="${y}"/>`).join('')}${line(B,'#c9d86a')}${line(A,'#f6b73c')}</svg>
+    <div class="gf"><div><b class="big">${short(c1)}</b><small>${dv>=0?'▲':'▼'} ${short(Math.abs(dv))} vs last week</small></div></div>`;
+  // fleet use per day columns
+  const use=L7.map(d=>n?S.bookings.filter(b=>onDay(b,d)).length/n:0),avg=Math.round(sum(use,x=>x)/7*100);
+  F('cUse').innerHTML=`<div class="cols">${L7.map((d,i)=>`<div class="col">${Array.from({length:6},(_,k)=>`<i class="${use[i]*6>5-k+.01?'on':''}"></i>`).join('')}<small>${new Date(ms(d)).toLocaleDateString('en-GB',{weekday:'narrow',timeZone:'UTC'})}</small></div>`).join('')}</div>
+    <div class="gf"><div><b class="big">${avg}<em>%</em></b><small>Avg cars rented out</small></div></div>`;
+  // collection score
+  const {rev,cost}=monthStats(month),mb=S.bookings.filter(b=>live(b)&&(b.start||'').slice(0,7)===month),paid=sum(mb,b=>b.paid),owed=sum(S.bookings.filter(live),b=>Math.max(0,bal(b)));
+  const score=rev?Math.round(Math.min(1,paid/rev)*100):100;
+  F('cColl').innerHTML=`<div class="wh"><span>Collection score</span><div class="ctr"><b class="score">${score}</b><strong>${score>=85?'Healthy cash flow':score>=60?'Some balances pending':'Chase payments'}</strong><small>${naira(paid)} collected this month</small></div><span></span></div>
+    <svg viewBox="0 0 300 80" class="waves" preserveAspectRatio="none">${wave(3,22,0,'#8a7f77',1.5)}${wave(3,26,1.2,'#f6b73c')}${wave(2.5,24,2.4,'#ff6b2c')}${wave(3.5,18,.6,'#e9dccf',1.5)}</svg>
+    <div class="wf"><div><small>Profit</small><b>${short(rev-cost)}</b></div><a href="#reports" class="ins"><span class="gi sm">▦</span>Insights</a><div class="r"><small>Still owed</small><b>${short(owed)}</b></div></div>`;
+  // booking rhythm: 60-day barcode
+  const D60=Array.from({length:61},(_,i)=>addD(TODAY,i-60)),dr=D60.map(dayRev),m60=Math.max(1,...dr),tm=mb.length;
+  const avgLen=mb.length?(sum(mb,days)/mb.length).toFixed(1):'0';
+  F('cRhythm').innerHTML=`<div class="wh"><span>Booking rhythm</span><div class="ctr"><b class="score">${tm}</b><strong>Trips this month</strong><small>Avg ${avgLen} days per trip</small></div><span></span></div>
+    <div class="code">${dr.map((v,i)=>`<i class="${i===60?'now':''}" style="height:${18+v/m60*82}%"></i>`).join('')}</div>
+    <div class="wf"><div><small>Avg per rental day</small><b>${short(rd?sum(S.bookings.filter(b=>L7.some(d=>onDay(b,d))),total)/Math.max(1,sum(S.bookings.filter(b=>L7.some(d=>onDay(b,d))),days)):0)}</b></div><a href="#bookings" class="ins"><span class="gi sm">▦</span>Trips</a><div class="r"><small>Booked this month</small><b>${short(rev)}</b></div></div>`;
+  // gauge: cars on the road now
+  const on=st.filter(k=>k==='out'||k==='overdue').length,pct=n?Math.round(on/n*100):0,T=48;
+  const ticks=Array.from({length:T+1},(_,i)=>{const a=Math.PI*(1-i/T),r1=92,r2=i%4?80:74;return `<line x1="${110+Math.cos(a)*r1}" y1="${110-Math.sin(a)*r1}" x2="${110+Math.cos(a)*r2}" y2="${110-Math.sin(a)*r2}" class="${i/T<=pct/100?'on':''}"/>`}).join('');
+  const ov=st.filter(k=>k==='overdue').length;
+  F('cGauge').innerHTML=`<div class="gicons">${['🚗','🔑','⏱','⚡','🧾','👤','📊'].map((x,i)=>`<span class="${i===3?'mid':''}">${x}</span>`).join('')}</div>
+    <div class="gwrap"><small>On the road</small><svg viewBox="0 0 220 120">${ticks}<path d="M110 14 l5 12 h-10z" fill="#fff"/></svg><b class="gp">${pct}%</b>
+    <svg viewBox="0 0 300 80" class="waves sm" preserveAspectRatio="none">${wave(4,16,0,'#ff6b2c')}${wave(4,14,1.4,'#f6b73c')}${wave(3,10,2.2,'#e9dccf',1)}</svg></div>
+    <div class="gfoot"><b>${ov?ov+' car'+(ov>1?'s':'')+' overdue':pct>=70?'Busy fleet, strong demand':pct>=30?'Balanced fleet & availability':'Plenty of cars available'}</b><small>${on} of ${n} cars out · ${st.filter(k=>k==='free').length} available</small></div>`;
   const out=S.bookings.filter(b=>b.status==='out').sort((a,b)=>a.end<b.end?-1:1);
   F('liveTrips').innerHTML=out.length?out.map(b=>{const k=stateOf(b),c=carOf(b.carId)||{},tot=Math.max(1,days(b)),gone=Math.min(tot,Math.max(0,diff(b.start,TODAY))),left=diff(TODAY,b.end);
     return `<button class="trip" data-edit="${esc(b.id)}"><div class="tt"><b>${esc(c.plate||'NO PLATE')}</b><span class="pill p-${k}">${k==='overdue'?'Overdue':'On trip'}</span></div><div class="tn">${esc(carName(b.carId))}</div>
@@ -310,11 +343,8 @@ function renderStage(){
     else if(b.status==='out'&&b.end===TODAY)al.push(['lime',`Returning today · ${esc(carName(b.carId))}`,esc(b.customer),b.id]);
     if(b.status==='returned'&&bal(b)>0)al.push(['red',`${naira(bal(b))} unpaid`,`${esc(b.customer)} · ${esc(carName(b.carId))}`,b.id]);}
   F('alerts').innerHTML=al.length?al.slice(0,8).map(([t,a,s,id])=>`<li><i class="dot ${t}"></i><span class="w"><b>${a}</b><small>${s}</small></span><button class="sm" data-edit="${esc(id)}">Open</button></li>`).join(''):'<li class="note">All clear — nothing needs attention.</li>';
-  const mix=[['out','On trip'],['overdue','Overdue'],['due','Pick-up due'],['free','Available']];
-  F('fleetMix').innerHTML=n?`<div class="mixbar">${mix.map(([k])=>cnt(k)?`<i class="m-${k}" style="flex:${cnt(k)}"></i>`:'').join('')}</div><ul class="mixk">${mix.map(([k,l])=>`<li><i class="m-${k}"></i>${l}<b>${cnt(k)}</b></li>`).join('')}</ul>`:'<p class="note">Add cars under Fleet.</p>';
-  F('drvList').innerHTML=S.drivers.length?S.drivers.map(d=>{const on=S.bookings.find(b=>b.driverId===d.id&&b.status==='out');return `<li><span class="av sm">${esc(d.name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase())}</span><span class="w"><b>${esc(d.name)}</b><small>${on?'Driving '+esc(carName(on.carId))+' · back '+fmtD(on.end):'Available'}</small></span><i class="dot ${on?'lime':''}"></i></li>`}).join(''):'<li class="note">No drivers yet.</li>';
 }
-const tick=()=>{const d=new Date();F('clock').textContent=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});F('today').textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})};tick();setInterval(tick,15000);
+const tick=()=>{const d=new Date();F('clock').textContent=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};tick();setInterval(tick,15000);
 F('gq').addEventListener('keydown',e=>{if(e.key==='Enter'){F('q').value=F('gq').value;filter='all';location.hash='bookings';renderBookings()}});
 
 /* ---- start ---- */

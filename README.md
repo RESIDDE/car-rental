@@ -10,3 +10,5 @@ npm run build    # production build in dist/
 
 Data is saved in the browser (localStorage).
 
+
+Hero photo: Unsplash (Unsplash License).
