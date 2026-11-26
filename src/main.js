@@ -327,8 +327,7 @@ function renderStage(){
   const on=st.filter(k=>k==='out'||k==='overdue').length,pct=n?Math.round(on/n*100):0,T=48;
   const ticks=Array.from({length:T+1},(_,i)=>{const a=Math.PI*(1-i/T),r1=92,r2=i%4?80:74;return `<line x1="${110+Math.cos(a)*r1}" y1="${110-Math.sin(a)*r1}" x2="${110+Math.cos(a)*r2}" y2="${110-Math.sin(a)*r2}" class="${i/T<=pct/100?'on':''}"/>`}).join('');
   const ov=st.filter(k=>k==='overdue').length;
-  F('cGauge').innerHTML=`<div class="gicons">${['🚗','🔑','⏱','⚡','🧾','👤','📊'].map((x,i)=>`<span class="${i===3?'mid':''}">${x}</span>`).join('')}</div>
-    <div class="gwrap"><small>On the road</small><svg viewBox="0 0 220 120">${ticks}<path d="M110 14 l5 12 h-10z" fill="#fff"/></svg><b class="gp">${pct}%</b>
+  F('cGauge').innerHTML=`<div class="gwrap"><small>On the road</small><svg viewBox="0 0 220 120">${ticks}<path d="M110 14 l5 12 h-10z" fill="#fff"/></svg><b class="gp">${pct}%</b>
     <svg viewBox="0 0 300 80" class="waves sm" preserveAspectRatio="none">${wave(4,16,0,'#ff6b2c')}${wave(4,14,1.4,'#f6b73c')}${wave(3,10,2.2,'#e9dccf',1)}</svg></div>
     <div class="gfoot"><b>${ov?ov+' car'+(ov>1?'s':'')+' overdue':pct>=70?'Busy fleet, strong demand':pct>=30?'Balanced fleet & availability':'Plenty of cars available'}</b><small>${on} of ${n} cars out · ${st.filter(k=>k==='free').length} available</small></div>`;
   const out=S.bookings.filter(b=>b.status==='out').sort((a,b)=>a.end<b.end?-1:1);
